@@ -183,14 +183,8 @@
             gap: 10px;
         }
 
-        .submit-btn:hover {
-            background: #2980b9;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-
-        .submit-btn:active {
-            transform: translateY(0);
+        .submit-btn.loading {
+            pointer-events: none;
         }
 
         .submit-btn .loading-spinner {
@@ -427,60 +421,134 @@
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
-            }
-
-            h1 {
-                font-size: 2em;
-            }
-
-            .share-btn {
-                right: 20px;
-                top: 80px;
-            }
-
-            .theme-toggle {
-                top: 80px;
+                margin: 0;
             }
 
             .content-box {
-                padding: 20px;
-                margin: 10px;
+                padding: 15px;
+                margin: 10px 0;
+                border-radius: 10px;
             }
 
-            .feedback-form {
-                margin-top: 20px;
+            h1 {
+                font-size: 1.8em;
+                margin-bottom: 15px;
             }
 
-            .share-options {
-                right: 20px;
-                top: 130px;
+            h2 {
+                font-size: 1.4em;
+                margin: 15px 0;
+            }
+
+            .form-group {
+                margin-bottom: 15px;
+            }
+
+            .form-group input,
+            .form-group textarea {
+                font-size: 16px;
+                padding: 12px;
+                border-radius: 8px;
+            }
+
+            .form-group textarea {
+                height: 120px;
+            }
+
+            .submit-btn {
+                width: 100%;
+                padding: 15px;
+                font-size: 1.1em;
+                margin-top: 10px;
             }
 
             .success-message {
                 width: 90%;
                 text-align: center;
                 padding: 15px;
-            }
-
-            .form-group input,
-            .form-group textarea {
-                font-size: 16px; /* Prevents zoom on iOS */
-            }
-
-            .submit-btn {
-                width: 100%;
-                padding: 15px;
+                font-size: 0.9em;
             }
 
             .share-btn,
             .theme-toggle {
                 padding: 12px;
+                font-size: 1.2em;
+                width: 45px;
+                height: 45px;
             }
 
             .share-options {
                 width: 90%;
                 left: 50%;
                 transform: translateX(-50%);
+                padding: 15px;
+                border-radius: 10px;
+            }
+
+            .share-options a {
+                padding: 12px;
+                font-size: 1em;
+                margin: 8px 0;
+            }
+
+            .share-options i {
+                font-size: 1.2em;
+                margin-right: 10px;
+            }
+
+            .feedback-form {
+                margin-top: 20px;
+            }
+
+            .feedback-form h3 {
+                font-size: 1.3em;
+                margin-bottom: 15px;
+            }
+
+            .char-counter {
+                font-size: 0.8em;
+                right: 5px;
+                bottom: 5px;
+            }
+
+            .error-message {
+                font-size: 0.85em;
+                margin-top: 5px;
+            }
+        }
+
+        /* Small Mobile Devices */
+        @media (max-width: 480px) {
+            .container {
+                padding: 5px;
+            }
+
+            .content-box {
+                padding: 12px;
+            }
+
+            h1 {
+                font-size: 1.6em;
+            }
+
+            h2 {
+                font-size: 1.2em;
+            }
+
+            .form-group input,
+            .form-group textarea {
+                padding: 10px;
+            }
+
+            .submit-btn {
+                padding: 12px;
+            }
+
+            .share-btn,
+            .theme-toggle {
+                width: 40px;
+                height: 40px;
+                padding: 10px;
             }
         }
     </style>
@@ -556,7 +624,26 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-analytics.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB9-GUqGj1XybYwXJu0BqqZPKD0cExt_hY",
+            authDomain: "mhs-2b3eb.firebaseapp.com",
+            projectId: "mhs-2b3eb",
+            storageBucket: "mhs-2b3eb.firebasestorage.app",
+            messagingSenderId: "833074373211",
+            appId: "1:833074373211:web:f70761903b71747482557e",
+            measurementId: "G-TPYQF0DD95"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
+
         document.addEventListener('DOMContentLoaded', function() {
             // Theme Toggle
             const themeToggle = document.getElementById('themeToggle');
@@ -582,58 +669,98 @@
             const successMessage = document.getElementById('successMessage');
             const submitBtn = feedbackForm.querySelector('.submit-btn');
 
+            // Form Validation
             function validateForm() {
                 let isValid = true;
-                const formGroups = feedbackForm.querySelectorAll('.form-group');
+                const name = document.getElementById('name').value.trim();
+                const email = document.getElementById('email').value.trim();
+                const feedback = document.getElementById('feedback').value.trim();
 
-                formGroups.forEach(group => {
-                    const input = group.querySelector('input, textarea');
-                    const errorMessage = group.querySelector('.error-message');
-                    
-                    if (!input.checkValidity()) {
-                        group.classList.add('error');
-                        errorMessage.style.display = 'block';
-                        isValid = false;
-                    } else {
-                        group.classList.remove('error');
-                        errorMessage.style.display = 'none';
-                    }
-                });
+                // Name validation
+                if (name.length < 2) {
+                    showError('name', 'Please enter a valid name (minimum 2 characters)');
+                    isValid = false;
+                }
+
+                // Email validation
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    showError('email', 'Please enter a valid email address');
+                    isValid = false;
+                }
+
+                // Feedback validation
+                if (feedback.length < 10) {
+                    showError('feedback', 'Feedback must be at least 10 characters long');
+                    isValid = false;
+                } else if (feedback.length > 500) {
+                    showError('feedback', 'Feedback cannot exceed 500 characters');
+                    isValid = false;
+                }
 
                 return isValid;
             }
 
-            feedbackForm.addEventListener('submit', function(e) {
+            function showError(fieldId, message) {
+                const group = document.getElementById(fieldId).closest('.form-group');
+                const errorMessage = group.querySelector('.error-message');
+                group.classList.add('error');
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+            }
+
+            feedbackForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 
                 if (!validateForm()) return;
 
                 submitBtn.classList.add('loading');
+                submitBtn.disabled = true;
                 
-                setTimeout(() => {
-                    const name = document.getElementById('name').value;
-                    const email = document.getElementById('email').value;
-                    const feedback = document.getElementById('feedback').value;
-                    
-                    const subject = `Marketing Mix Feedback from ${name}`;
-                    const body = `Name: ${name}\nEmail: ${email}\nFeedback: ${feedback}\n\nPage: Marketing Mix Notes`;
-                    const mailtoLink = `mailto:mdhidayatullahsheikh786@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                    
-                    window.open(mailtoLink, '_blank');
-                    
+                const name = document.getElementById('name').value.trim();
+                const email = document.getElementById('email').value.trim();
+                const feedback = document.getElementById('feedback').value.trim();
+                
+                try {
+                    // Store feedback in Firestore
+                    const docRef = await addDoc(collection(db, "feedback"), {
+                        name: name,
+                        email: email,
+                        feedback: feedback,
+                        page: 'Marketing Mix',
+                        timestamp: serverTimestamp()
+                    });
+
+                    console.log("Feedback stored with ID: ", docRef.id);
+
+                    // Show success message
                     successMessage.style.display = 'block';
                     successMessage.style.animation = 'slideIn 0.5s ease-out forwards';
                     
+                    // Reset form after success message
                     setTimeout(() => {
                         successMessage.style.animation = 'slideOut 0.5s ease-out forwards';
                         setTimeout(() => {
                             successMessage.style.display = 'none';
+                            feedbackForm.reset();
+                            // Reset character counter
+                            document.getElementById('charCount').textContent = '0';
+                            document.getElementById('charCount').style.color = '#95a5a6';
                         }, 500);
                     }, 4000);
-                    
-                    feedbackForm.reset();
+                } catch (error) {
+                    console.error("Error storing feedback: ", error);
+                    if (error.code === 'permission-denied') {
+                        alert("Sorry, we couldn't save your feedback due to permission issues. Please try again later.");
+                    } else if (error.code === 'unavailable') {
+                        alert("Sorry, our service is currently unavailable. Please try again later.");
+                    } else {
+                        alert("Sorry, there was an error submitting your feedback. Please try again later.");
+                    }
+                } finally {
                     submitBtn.classList.remove('loading');
-                }, 1000);
+                    submitBtn.disabled = false;
+                }
             });
 
             // Real-time validation with debounce
